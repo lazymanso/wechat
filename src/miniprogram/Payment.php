@@ -8,13 +8,13 @@ namespace lazymanso\wechat\miniprogram;
 class Payment extends Base
 {
 	/**
-	 * 小程序app id
+	 * 支付小程序appid
 	 * @var string
 	 */
 	protected $strAppId;
 
 	/**
-	 * 小程序secret
+	 * 支付小程序secret
 	 * @var string
 	 */
 	protected $strAppSecret;
@@ -38,36 +38,64 @@ class Payment extends Base
 	protected $strKey;
 
 	/**
-	 * 商户证书
-	 * @var string
+	 * 设置商户支付配置
+	 * @param array $aConfig [in]商户支付配置
+	 * @return boolean
 	 */
-	protected $strApiclientCert;
-
-	/**
-	 * 商户证书密钥
-	 * @var string
-	 */
-	protected $strApiclientKey;
-
-	/**
-	 * 构造函数扩展
-	 * @access protected
-	 * @return void
-	 */
-	protected function _initialize()
+	public function setPaymentConfig(array $aConfig)
 	{
-		parent::_initialize();
+		if ($this->checkFields($aConfig, ['appid', 'secret', 'mchid', 'mchname', 'apikey'], [], true))
+		{
+			return false;
+		}
+		$this->strAppId = $aConfig['appid'];
+		$this->strAppSecret = $aConfig['secret'];
+		$this->strMchId = $aConfig['mchid'];
+		$this->strMchName = $aConfig['mchname'];
+		$this->strKey = $aConfig['apikey'];
+		return true;
+	}
+
+	/**
+	 * 生成签名
+	 * @param array $aParam [in]签名参数
+	 * @return string
+	 */
+	protected function sign(array $aParam)
+	{
+		//签名步骤一：按字典序排序参数
+		ksort($aParam);
+		$buff = '';
+		foreach ($aParam as $k => $v)
+		{
+			if ($k != 'sign' && $v != '' && !is_array($v))
+			{
+				$buff .= $k . '=' . $v . '&';
+			}
+		}
+		//签名步骤二：在string后加入KEY
+		$strPreSignString = $buff . 'key=' . $this->strKey;
+		//签名步骤三：MD5加密
+		$string = md5($strPreSignString);
+		//签名步骤四：所有字符转为大写
+		return strtoupper($string);
 	}
 
 	/**
 	 * 微信小程序统一下单
-	 * @param array $aInput [in]必填['login_session', 'out_trade_no','total_fee']
+	 * @param array $aInput [in]必填['out_trade_no','total_fee',openid]
+	 * <pre>
+	 * out_trade_no - string,必填,商户自定义的订单交易号
+	 * total_fee - int,必填,订单金额,单位（分）
+	 * openid - string,必填,发起支付的小程序用户的openid
+	 * notify_url - string,必填,接收微信支付结果通知的回调地址
+	 * </pre>
 	 * @param array $aOutput [out]返回['prepay_id','trade_type']
 	 * @return boolean
 	 */
 	public function unifiedOrder(array $aInput, array &$aOutput = [])
 	{
-		if (!$this->_checkFields($aInput, ['login_session', 'out_trade_no', 'total_fee']))
+		if (!$this->checkFields($aInput, ['out_trade_no', 'total_fee', 'openid', 'notify_url']))
 		{
 			return false;
 		}
@@ -76,38 +104,25 @@ class Payment extends Base
 			$this->setError('商品价格小于等于0，下单失败');
 			return false;
 		}
-		//获取openid
-		$strLoginSession = $aInput['login_session'];
-		if (!$aSession = $this->_getLocalSessionInfo($strLoginSession, ['openid', 'site_id']))
-		{
-			return false;
-		}
-		$nSiteId = $aSession['site_id'];
-		//获取商户支付配置
-		if (!$this->_getPaymentContent($nSiteId))
-		{
-			return false;
-		}
-		$strBody = $this->_strMchName . '-' . $aInput['out_trade_no'];
+		$strBody = $this->strMchName . '-' . $aInput['out_trade_no'];
 		$aParam = [
-			'appid' => $this->_strAppId,
-			'mch_id' => $this->_strMchId,
-			'nonce_str' => $this->_createNoncestr(),
+			'appid' => $this->strAppId,
+			'mch_id' => $this->strMchId,
+			'nonce_str' => $this->createNoncestr(),
 			'body' => $strBody,
 			'out_trade_no' => $aInput['out_trade_no'],
 			'total_fee' => $aInput['total_fee'],
-			'spbill_create_ip' => I('server.REMOTE_ADDR'),
-			'notify_url' => \WxappConf::API_URL_PAY_NOTIFY, //接收微信支付结果的地址
-			'openid' => $aSession['openid'],
+			'spbill_create_ip' => $_SERVER['REMOTE_ADDR'],
+			'notify_url' => $aInput['notify_url'], //接收微信支付结果的地址
+			'openid' => $aInput['openid'],
 			'trade_type' => 'JSAPI',
 		];
-		$aParam['sign'] = $this->_getSign($aParam);
-		//
-		if (!$this->_doCommand(CMD::PAY_UNIFIED_ORDER, $aParam, 'xml'))
+		$aParam['sign'] = $this->sign($aParam);
+		if (false === $aResponse = $this->doCommand(Command::PAY_UNIFIED_ORDER, $aParam, 'xml'))
 		{
 			return false;
 		}
-		$aOutput = $this->response;
+		$aOutput = $aResponse;
 		return true;
 	}
 
@@ -168,7 +183,7 @@ class Payment extends Base
 		//签名
 		$aParam['sign'] = $this->_getSign($aParam);
 		//
-		if (!$this->_doCommand(CMD::PAY_QUERY_ORDER, $aParam, 'xml'))
+		if (!$this->_doCommand(Command::PAY_QUERY_ORDER, $aParam, 'xml'))
 		{
 			return false;
 		}
@@ -228,7 +243,7 @@ class Payment extends Base
 		//签名
 		$aParam['sign'] = $this->_getSign($aParam);
 		//
-		if (!$this->_doCommand(CMD::PAY_CLOSE_ORDER, $aParam, 'xml'))
+		if (!$this->_doCommand(Command::PAY_CLOSE_ORDER, $aParam, 'xml'))
 		{
 			return false;
 		}
@@ -299,7 +314,7 @@ class Payment extends Base
 		);
 		$aParam['sign'] = $this->_getSign($aParam);
 		//
-		if (!$this->_doCommand(CMD::PAY_REFUND_ORDER, $aParam, 'xml'))
+		if (!$this->_doCommand(Command::PAY_REFUND_ORDER, $aParam, 'xml'))
 		{
 			return false;
 		}
@@ -552,7 +567,7 @@ class Payment extends Base
 		);
 		$aParam['sign'] = $this->_getSign($aParam);
 		//
-		if (!$this->_doCommand(CMD::PAY_QUERY_REFUND_ORDER, $aParam, 'xml'))
+		if (!$this->_doCommand(Command::PAY_QUERY_REFUND_ORDER, $aParam, 'xml'))
 		{
 			return false;
 		}
@@ -1174,10 +1189,5 @@ class Payment extends Base
 		$this->_strAppSecret = $aPayAccount['content_openid'];
 		$this->_strKey = $aPayAccount['content_key'];
 		return true;
-	}
-
-	public function __destruct()
-	{
-		parent::__destruct();
 	}
 }

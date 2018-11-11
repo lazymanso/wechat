@@ -95,7 +95,7 @@ class Common
 	}
 
 	/**
-	 * 设置(并记录)错误信息
+	 * 设置错误信息
 	 * @access public
 	 * @param mixed $mxError [in]错误信息，或错误号
 	 * @return void

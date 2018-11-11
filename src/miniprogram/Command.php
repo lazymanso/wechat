@@ -16,6 +16,7 @@ class Command
 	private static $_strError = '';
 
 	const BASEAPIURI = 'https://api.weixin.qq.com/';
+	const MINIPROGRAM_PAYAPIURI = 'https://api.mch.weixin.qq.com/';
 	/* ====================================================================== */
 	//基础类API列表
 	/** 开发者服务器使用登录凭证 code 获取 session_key 和 openid */
@@ -192,13 +193,13 @@ class Command
 		self::BASE_MEDIA_UPLOADIMG => [self::BASEAPIURI . 'cgi-bin/media/uploadimg', ['access_token']],
 		self::BASE_GET_TICKET => [self::BASEAPIURI . 'cgi-bin/ticket/getticket', ['access_token', 'type']],
 		/** 小程序支付接口 */
-		self::PAY_UNIFIED_ORDER => 'https://api.mch.weixin.qq.com/pay/unifiedorder',
-		self::PAY_QUERY_ORDER => 'https://api.mch.weixin.qq.com/pay/orderquery',
-		self::PAY_CLOSE_ORDER => 'https://api.mch.weixin.qq.com/pay/closeorder',
-		self::PAY_REFUND_ORDER => 'https://api.mch.weixin.qq.com/secapi/pay/refund',
-		self::PAY_QUERY_REFUND_ORDER => 'https://api.mch.weixin.qq.com/pay/refundquery',
-		self::PAY_DOWNLOAD_BILL => 'https://api.mch.weixin.qq.com/pay/downloadbill',
-		self::PAY_QUERUY_ORDER_COMMENT => 'https://api.mch.weixin.qq.com/billcommentsp/batchquerycomment',
+		self::PAY_UNIFIED_ORDER => ['post', self::MINIPROGRAM_PAYAPIURI . 'pay/unifiedorder'],
+		self::PAY_QUERY_ORDER => ['post', self::MINIPROGRAM_PAYAPIURI . 'pay/orderquery'],
+		self::PAY_CLOSE_ORDER => ['post', self::MINIPROGRAM_PAYAPIURI . 'pay/closeorder'],
+		self::PAY_REFUND_ORDER => ['post', self::MINIPROGRAM_PAYAPIURI . 'secapi/pay/refund'],
+		self::PAY_QUERY_REFUND_ORDER => ['post', self::MINIPROGRAM_PAYAPIURI . 'pay/refundquery'],
+		self::PAY_DOWNLOAD_BILL => ['post', self::MINIPROGRAM_PAYAPIURI . 'pay/downloadbill'],
+		self::PAY_QUERUY_ORDER_COMMENT => ['post', self::MINIPROGRAM_PAYAPIURI . 'billcommentsp/batchquerycomment'],
 		/** 小程序模版消息 */
 		self::TPL_LIB_LIST => [self::BASEAPIURI . 'cgi-bin/wxopen/template/library/list', ['access_token']],
 		self::TPL_LIB_KEYWORD_LIST => [self::BASEAPIURI . 'cgi-bin/wxopen/template/library/get', ['access_token']],
@@ -284,13 +285,14 @@ class Command
 			self::setError('指令代码不存在 ' . $nCode);
 			return false;
 		}
-		$config = self::$_aMap[$nCode];
-		if (!is_array($config))
-		{
-			return $config;
-		}
-		$url = $config[0];
-		$aKey = $config[1];
+		$aConfig = self::$_aMap[$nCode];
+		$method = $aConfig[0];
+		$url = $aConfig[1];
+		$aKey = $aConfig[2];
+		return [
+			'method' => $method,
+			'url' => $url,
+		];
 		//检测$param中是否存在命令所需的get参数
 		$aUrlParam = [];
 		foreach ($aKey as $key)
@@ -304,60 +306,5 @@ class Command
 			unset($param[$key]);
 		}
 		return $url . '?' . http_build_query($aUrlParam);
-	}
-
-	/**
-	 * 设置错误信息
-	 * @access public
-	 * @param mixed $mxError [in]错误信息
-	 * @return void
-	 */
-	protected function setError($mxError)
-	{
-		if (is_object($mxError))
-		{
-			self::$_strError = $mxError->getError();
-			return;
-		}
-		else if (is_numeric($mxError))
-		{
-			self::$_strError = $mxError;
-			return;
-		}
-		else if (!is_string($mxError) && !is_array($mxError))
-		{
-			self::$_strError = ErrorConf::ERROR_UNKNOWN_ERROR;
-			return;
-		}
-
-		self::$_strError = $mxError;
-	}
-
-	/**
-	 * 获取错误信息
-	 * @access public
-	 * @return mixed 错误信息
-	 */
-	public static function getError()
-	{
-		if (!empty(self::$_strError) && is_string(self::$_strError))
-		{
-			if (substr(self::$_strError, 0, 1) == '_')
-			{
-				return L(self::$_strError);
-			}
-			else
-			{
-				return self::$_strError;
-			}
-		}
-		else if (is_numeric(self::$_strError))
-		{
-			return ErrorConf::getError(self::$_strError);
-		}
-		else
-		{
-			return self::$_strError;
-		}
 	}
 }

@@ -10,11 +10,6 @@ use lazymanso\wechat\Common;
 class Curl extends Common
 {
 	/**
-	 * curl超时设定
-	 */
-	const TIMEOUT = 60;
-
-	/**
 	 * 超时时间
 	 * @var int
 	 */
@@ -59,9 +54,8 @@ class Curl extends Common
 	 * @access protected
 	 * @return void
 	 */
-	protected function _initialize()
+	public function __construct()
 	{
-		parent::_initialize();
 		$this->_initCurl();
 	}
 
@@ -96,7 +90,6 @@ class Curl extends Common
 		{
 			$msg = curl_error(self::$_oCurl);
 		}
-
 		if (200 != $aHttpStatusInfo['http_code'] || !is_null($msg))
 		{
 			if ($this->_bLoadCert)
@@ -104,7 +97,7 @@ class Curl extends Common
 				unlink($this->_strCertPath);
 				unlink($this->_strKeyPath);
 			}
-			$this->setError($msg, '', false);
+			$this->setError($msg);
 			return false;
 		}
 		return true;
@@ -224,99 +217,12 @@ class Curl extends Common
 	}
 
 	/**
-	 * 设置uuid
-	 * @param string $strUuid
-	 */
-	public function setUuid($strUuid)
-	{
-		if (empty($strUuid))
-		{
-			$strUuid = $_REQUEST['uuid'];
-		}
-		$this->_strUuid = $strUuid;
-	}
-
-	/**
 	 * 设置超时时间
 	 * @param int $nTime [in]时间，秒
 	 */
 	public function setTimeout($nTime)
 	{
 		$this->_nTimeout = $nTime;
-	}
-
-	/**
-	 * 根据当前调用接口的uuid用户获取证书文件
-	 * @return boolean
-	 */
-	private function _getPemByUuid()
-	{
-		if (empty($this->_strUuid))
-		{
-			$this->setError('获取商户证书失败：缺少 uuid！');
-			return false;
-		}
-		$aInput = ['uuid' => $this->_strUuid];
-		if (!$this->_checkUuid($aInput))
-		{
-			return false;
-		}
-		//当前商户的证书路径
-		$strUuidPath = PAY_CERT_PATH . $this->_strUuid . '/';
-		$this->_strCertPath = $strUuidPath . self::CERTNAME;
-		$this->_strKeyPath = $strUuidPath . self::KEYNAME;
-		if (!file_exists($strUuidPath))
-		{
-			mkdir($strUuidPath, 0755);
-		}
-		//证书文件不存在则重新生成
-		if (!file_exists($this->_strCertPath) || !file_exists($this->_strKeyPath))
-		{
-			if (!$this->_getPaymentPemContent())
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * 获取商户支付证书配置
-	 */
-	private function _getPaymentPemContent()
-	{
-		static $aPayAccountMap = [];
-		if (isset($aPayAccountMap[$this->_nSiteId]))
-		{
-			$aPayAccount = $aPayAccountMap[$this->_nSiteId];
-		}
-		else
-		{
-			$oPaymentContent = D('PaymentContent');
-			$aLocator = [
-				'site_id' => $this->_nSiteId,
-				'content_status' => 1,
-			];
-			$aField = [
-				'content_privates' => 'key',
-				'content_publics' => 'cert',
-			];
-			if (!$aPaymentContentList = $oPaymentContent->getList($aLocator, [], $aField, [], '', 1))
-			{
-				$this->setError('获取支付配置信息失败：' . $oPaymentContent->getError());
-				return false;
-			}
-			$aPayAccount = $aPaymentContentList[0];
-			$aPayAccountMap[$this->_nSiteId] = $aPayAccount;
-		}
-		if (empty($aPayAccount['key']) || empty($aPayAccount['cert']))
-		{
-			$this->setError('商户支付证书信息未设置或不完整！');
-			return false;
-		}
-		file_put_contents($this->_strKeyPath, $aPayAccount['key']);
-		file_put_contents($this->_strCertPath, $aPayAccount['cert']);
-		return true;
 	}
 
 	/**
@@ -327,7 +233,5 @@ class Curl extends Common
 	{
 		//关闭句柄
 		curl_close(self::$_oCurl);
-		//删除需要删掉的文件
-		$this->deletePreFilePath();
 	}
 }
