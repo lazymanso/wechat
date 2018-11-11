@@ -1,0 +1,14 @@
+{
+	"name": "lazymanso/wechat",
+	"description": "wechat api sets",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "lazyman",
+			"email": "zzs@zhongfx.net"
+		}
+	],
+	"require": {
+		"php": ">=5.6.0"
+	}
+}
