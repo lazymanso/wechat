@@ -42,9 +42,9 @@ class Payment extends Base
 	 * @param array $aConfig [in]商户支付配置
 	 * @return boolean
 	 */
-	public function setPaymentConfig(array $aConfig)
+	public function setConfig(array $aConfig)
 	{
-		if ($this->checkFields($aConfig, ['appid', 'secret', 'mchid', 'mchname', 'apikey'], [], true))
+		if (!$this->checkFields($aConfig, ['appid', 'secret', 'mchid', 'mchname', 'apikey'], [], true))
 		{
 			return false;
 		}
