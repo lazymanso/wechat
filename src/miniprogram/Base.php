@@ -39,16 +39,15 @@ class Base extends Common
 	/**
 	 * 向微信发送请求
 	 * @param int $nCommand [in]api接口代码
-	 * @param mixed $param [in]参数
+	 * @param mixed $param [in]请求参数
 	 * @param string $strDataType [in opt]参数格式化类型(xml,json) 默认不处理
-	 * @param string $strCurlMethod [in opt]请求类型 默认post opt['get','post','file']
-	 * @return mxied
+	 * @return mxied 经过处理的微信接口响应内容，返回 false 时表示出错
 	 */
 	protected function doCommand($nCommand, $param, $strDataType = '')
 	{
 		if (!$aRequest = Command::get($nCommand, $param))
 		{
-			$this->setError(Command::getError());
+			$this->setError('解析微信小程序命令失败');
 			return false;
 		}
 		//处理参数
@@ -64,23 +63,15 @@ class Base extends Common
 				$data = $param;
 		}
 		//发送请求
-		$result = '';
-		switch ($nCommand)
-		{
-			case Command::PAY_REFUND_ORDER:
-				$bUseCert = true;
-				break;
-			default :
-				$bUseCert = false;
-		}
 		$this->oCurlUtil = new Curl;
+		$result = '';
 		switch ($aRequest['method'])
 		{
 			case 'get':
 				$cmdResult = $this->oCurlUtil->get($aRequest['url'], $result);
 				break;
 			case 'post':
-				$cmdResult = $this->oCurlUtil->post($aRequest['url'], $data, $result, $bUseCert);
+				$cmdResult = $this->oCurlUtil->post($aRequest['url'], $data, $result);
 				break;
 			case 'file':
 				$cmdResult = $this->oCurlUtil->file($aRequest['url'], $data, $result);
@@ -88,34 +79,11 @@ class Base extends Common
 		}
 		if (!$cmdResult)
 		{
+			$data = is_array($data) ? print_r($data, true) : $data;
+			$this->setError('请求微信接口失败 ' . $aRequest['method'] . ' ' . $aRequest['url'] . ' ' . $data);
 			return false;
 		}
 		return $this->checkResult($result);
-	}
-
-	/**
-	 * 生成签名
-	 * @param array $aParam [in]签名参数
-	 * @return string
-	 */
-	protected function sign(array $aParam)
-	{
-		//签名步骤一：按字典序排序参数
-		ksort($aParam);
-		$buff = '';
-		foreach ($aParam as $k => $v)
-		{
-			if ($k != 'sign' && $v != '' && !is_array($v))
-			{
-				$buff .= $k . '=' . $v . '&';
-			}
-		}
-		//签名步骤二：在string后加入KEY
-		$strPreSignString = $buff . 'key=' . $this->strKey;
-		//签名步骤三：MD5加密
-		$string = md5($strPreSignString);
-		//签名步骤四：所有字符转为大写
-		return strtoupper($string);
 	}
 
 	/**
@@ -152,7 +120,8 @@ class Base extends Common
 			}
 			elseif ('FAIL' === $aResult['result_code'])
 			{
-				$this->setError($aResult['err_code'] . ',' . $aResult['err_code_des']);
+				//$this->setError($aResult['err_code'] . ',' . $aResult['err_code_des']);
+				$this->setError($aResult['err_code']);
 				return false;
 			}
 			else

@@ -2,7 +2,7 @@
 
 namespace lazymanso\wechat;
 
-use lazymanso\wechat\ErrorCode;
+use lazymanso\wechat\config\ErrorCode;
 
 class Common
 {

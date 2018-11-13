@@ -7,14 +7,6 @@ namespace lazymanso\wechat\miniprogram;
  */
 class Command
 {
-	/**
-	 * 错误信息
-	 * @static
-	 * @access private
-	 * @var string
-	 */
-	private static $_strError = '';
-
 	const BASEAPIURI = 'https://api.weixin.qq.com/';
 	const MINIPROGRAM_PAYAPIURI = 'https://api.mch.weixin.qq.com/';
 	/* ====================================================================== */
@@ -272,17 +264,12 @@ class Command
 	 * @access public
 	 * @param int $nCode [in]代码
 	 * @param mixed $param [out]额外参数
-	 * @return mixed 返回
+	 * @return mixed
 	 */
-	public static function get($nCode = '', &$param = '')
+	public static function get($nCode, &$param = '')
 	{
-		if ('' === $nCode)
+		if (empty($nCode) || !isset(self::$_aMap[$nCode]))
 		{
-			return self::$_aMap;
-		}
-		if (!isset(self::$_aMap[$nCode]))
-		{
-			self::setError('指令代码不存在 ' . $nCode);
 			return false;
 		}
 		$aConfig = self::$_aMap[$nCode];

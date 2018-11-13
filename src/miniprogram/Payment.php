@@ -93,7 +93,7 @@ class Payment extends Base
 	 * @param array $aOutput [out]返回['prepay_id','trade_type']
 	 * @return boolean
 	 */
-	public function unifiedOrder(array $aInput, array &$aOutput = [])
+	public function unifiedOrder(array $aInput)
 	{
 		if (!$this->checkFields($aInput, ['out_trade_no', 'total_fee', 'openid', 'notify_url']))
 		{
@@ -122,73 +122,77 @@ class Payment extends Base
 		{
 			return false;
 		}
-		$aOutput = $aResponse;
-		return true;
+		return $aResponse;
 	}
 
 	/**
 	 * 订单查询
-	 * @param array $aInput [in]输入
+	 * 该接口提供所有微信支付订单的查询，商户可以通过查询订单接口主动查询订单状态
+	 * @param array $aInput [in]参数列表
 	 * <pre>
-	 * transaction_id和out_trade_no二选一
-	 * array(
-	 * 'uuid', 必填
-	 * 'out_trade_no', 选填
-	 * 'transaction_id', 选填
-	 * )
+	 * out_trade_no - string,必填,商户的订单编号
 	 * </pre>
-	 * @param array $aOutput [out]输出 为空数组时说明订单不存在，可以下单
-	 * @return boolean
+	 * @param array $aOutput [out]响应内容
+	 * @link https://pay.weixin.qq.com/wiki/doc/api/wxa/wxa_api.php?chapter=9_2
+	 * @return boolean|array 返回 false 时表示出错,返回空数组时表示订单不存在
 	 */
-	public function queryOrder(array $aInput, array &$aOutput = [])
+	public function queryOrder(array $aInput)
 	{
-		if (!$this->_checkFields($aInput, ['uuid'], ['out_trade_no', 'transaction_id'], true))
+		if (!$this->checkFields($aInput, ['out_trade_no'], [], true))
 		{
 			return false;
 		}
-		if (!$this->_checkUuid($aInput))
-		{
-			return false;
-		}
-		$strOutTradeNo = (string) $aInput['out_trade_no'];
-		$strTransactionId = (string) $aInput['transaction_id'];
-		if (empty($strOutTradeNo) && empty($strTransactionId))
-		{
-			$this->setError('缺少参数订单号,请输入微信订单号或商户订单号');
-			return false;
-		}
-		//获取商户支付配置
-		if (!$this->_getPaymentContent($this->_nSiteId))
-		{
-			return false;
-		}
-		$aParam = array(
-			'appid' => $this->_strAppId,
-			'mch_id' => $this->_strMchId,
-			'nonce_str' => $this->_createNoncestr(),
-		);
-		//订单标识
-		if (empty($strOutTradeNo))
-		{
-			$aParam['transaction_id'] = $strTransactionId;
-		}
-		elseif (empty($strTransactionId))
-		{
-			$aParam['out_trade_no'] = $strOutTradeNo;
-		}
-		else
-		{
-			$aParam['transaction_id'] = $strTransactionId;
-		}
-		//签名
-		$aParam['sign'] = $this->_getSign($aParam);
+		// 请求参数
+		$aParam = [
+			'appid' => $this->strAppId,
+			'mch_id' => $this->strMchId,
+			'nonce_str' => $this->createNoncestr(),
+			'out_trade_no' => $aInput['out_trade_no'],
+		];
+		// 签名
+		$aParam['sign'] = $this->sign($aParam);
 		//
-		if (!$this->_doCommand(Command::PAY_QUERY_ORDER, $aParam, 'xml'))
+		if (false === $aResponse = $this->doCommand(Command::PAY_QUERY_ORDER, $aParam, 'xml'))
+		{
+			// ORDERNOTEXIST - 订单不存在
+			if ('ORDERNOTEXIST' === $this->getError())
+			{
+				return [];
+			}
+			return false;
+		}
+		return $aResponse;
+	}
+
+	/**
+	 * 返回wx.requestPayment所需要的object参数
+	 * @param array $aInput [in]输入['package'=>'prepay_id=$strPrepayId']
+	 * @return false|array
+	 */
+	public function getRequestPaymentObject(array $aInput)
+	{
+		if (!$this->checkFields($aInput, ['package'], [], true))
 		{
 			return false;
 		}
-		$aOutput = $this->response;
-		return true;
+		$strNowtime = (string) time();
+		$strNonce = $this->createNoncestr();
+		//签名参数
+		$aSignParam = [
+			'appId' => $this->strAppId,
+			'timeStamp' => $strNowtime,
+			'nonceStr' => $strNonce,
+			'package' => $aInput['package'],
+			'signType' => 'MD5',
+		];
+		//输出数据
+		return [
+			'timeStamp' => $strNowtime,
+			'nonceStr' => $strNonce,
+			'package' => $aInput['package'],
+			'signType' => 'MD5',
+			'paySign' => $this->sign($aSignParam),
+		];
 	}
 
 	/**
@@ -714,87 +718,6 @@ class Payment extends Base
 	public function queryOrderComment(array $aInput, array &$aOutput = [])
 	{
 		return false;
-	}
-
-	/**
-	 * 返回wx.requestPayment所需要的object参数
-	 * @param array $aInput [in]输入['uuid', 'login_session', 'order_id']
-	 * @param array $aOutput [out]返回数据['timeStamp','nonceStr','package','signType','paySign']
-	 * @return boolean
-	 */
-	public function getRequestPaymentObject(array $aInput, array &$aOutput = [])
-	{
-		if (!$this->_checkFields($aInput, ['uuid', 'login_session', 'order_id']) || !$this->_checkUuid($aInput))
-		{
-			return false;
-		}
-
-		$nOrderId = intval($aInput['order_id']);
-		//获取订单信息
-		$aOrderInfo = [];
-		$aOrderField = ['order_sn', 'order_amount', 'shipping_price'];
-		if (!$this->_oOrderService->getOrderById($nOrderId, $aOrderField, $aOrderInfo))
-		{
-			return false;
-		}
-		$aCommonInput = array_merge($aInput, [
-			'out_trade_no' => $aOrderInfo['order_sn'],
-			'total_fee' => ($aOrderInfo['order_amount'] + $aOrderInfo['shipping_price']) * 100,
-		]);
-
-		//查询订单状态
-		$aOrderStateResult = [];
-		if (!$this->queryOrder($aCommonInput, $aOrderStateResult))
-		{
-			return false;
-		}
-		if (!empty($aOrderStateResult) && !in_array($aOrderStateResult['trade_state'], [\WxappConf::WXORDER_TRADE_STATE_NOTPAY,
-			\WxappConf::WXORDER_TRADE_STATE_PAYERROR]))
-		{
-			$this->setError('订单状态不允许支付，原因：' . \WxappConf::getWXOrderTradeState($aOrderStateResult['trade_state']));
-			return false;
-		}
-		//下单
-		$aUnifiedOrderResult = [];
-		if (!$this->unifiedOrder($aCommonInput, $aUnifiedOrderResult))
-		{
-			return false;
-		}
-		//保存formId
-		$oTplmsgService = fn_GetService(\ServiceConf::NAME_TEMPLATE_MESSAGE);
-		$aSaveFormIdInput = [
-			'uuid' => $this->_strUuid,
-			'keyword' => 'order_' . $nOrderId,
-			'form_id' => $aUnifiedOrderResult['prepay_id'],
-			'form_id_type' => \WxappConf::FORM_ID_TYPE_PREPAY,
-		];
-		$oTplmsgService->saveFormId($aSaveFormIdInput);
-
-		$strPrepayId = 'prepay_id=' . $aUnifiedOrderResult['prepay_id'];
-		//获取商户支付配置
-		if (!$this->_getPaymentContent($this->_nSiteId))
-		{
-			return false;
-		}
-		$strNowtime = (string) time();
-		$strNonce = $this->_createNoncestr();
-		//签名参数
-		$aSignParam = [
-			'appId' => $this->_strAppId,
-			'timeStamp' => $strNowtime,
-			'nonceStr' => $strNonce,
-			'package' => $strPrepayId,
-			'signType' => 'MD5',
-		];
-		//输出数据
-		$aOutput = [
-			'timeStamp' => $strNowtime,
-			'nonceStr' => $strNonce,
-			'package' => $strPrepayId,
-			'signType' => 'MD5',
-			'paySign' => $this->_getSign($aSignParam),
-		];
-		return true;
 	}
 
 	/**

@@ -13,41 +13,13 @@ class Curl extends Common
 	 * 超时时间
 	 * @var int
 	 */
-	protected $_nTimeout = 60;
-
-	/**
-	 * 证书key文件名
-	 */
-	const KEYNAME = 'apiclient_key.pem';
-
-	/**
-	 * 证书cert文件名
-	 */
-	const CERTNAME = 'apiclient_cert.pem';
-
-	/**
-	 * 证书密钥文件路径
-	 * @var string
-	 */
-	private $_strCertPath = '';
-
-	/**
-	 * 证书文件路径
-	 * @var string
-	 */
-	private $_strKeyPath = '';
+	protected $nTimeout = 30;
 
 	/**
 	 * curl 句柄
 	 * @var resource
 	 */
-	private static $_oCurl = null;
-
-	/**
-	 * 是否使用证书
-	 * @var boolean
-	 */
-	private $_bLoadCert = false;
+	protected $oCurl = null;
 
 	/**
 	 * 构造函数扩展
@@ -56,23 +28,23 @@ class Curl extends Common
 	 */
 	public function __construct()
 	{
-		$this->_initCurl();
+		$this->initCurl();
 	}
 
 	/**
 	 * 初始化 curl
 	 */
-	private function _initCurl()
+	protected function initCurl()
 	{
-		if (is_null(self::$_oCurl))
+		if (is_null($this->oCurl))
 		{
-			self::$_oCurl = curl_init();
-			curl_setopt(self::$_oCurl, CURLOPT_HEADER, 0);
-			curl_setopt(self::$_oCurl, CURLOPT_FOLLOWLOCATION, 1);
-			curl_setopt(self::$_oCurl, CURLOPT_RETURNTRANSFER, 1);
-			curl_setopt(self::$_oCurl, CURLOPT_SSL_VERIFYPEER, false);
-			curl_setopt(self::$_oCurl, CURLOPT_TIMEOUT, $this->_nTimeout);
-			curl_setopt(self::$_oCurl, CURLOPT_ENCODING, 'gzip');
+			$this->oCurl = curl_init();
+			curl_setopt($this->oCurl, CURLOPT_HEADER, 0);
+			curl_setopt($this->oCurl, CURLOPT_FOLLOWLOCATION, 1);
+			curl_setopt($this->oCurl, CURLOPT_RETURNTRANSFER, 1);
+			curl_setopt($this->oCurl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($this->oCurl, CURLOPT_TIMEOUT, $this->nTimeout);
+			curl_setopt($this->oCurl, CURLOPT_ENCODING, 'gzip');
 		}
 	}
 
@@ -83,20 +55,15 @@ class Curl extends Common
 	 */
 	private function _execCurl(&$result = '')
 	{
-		$result = curl_exec(self::$_oCurl);
-		$aHttpStatusInfo = curl_getinfo(self::$_oCurl); //返回状态码
+		$result = curl_exec($this->oCurl);
+		$aHttpStatusInfo = curl_getinfo($this->oCurl); //返回状态码
 		$msg = null;
 		if ($result === false)
 		{
-			$msg = curl_error(self::$_oCurl);
+			$msg = curl_error($this->oCurl);
 		}
 		if (200 != $aHttpStatusInfo['http_code'] || !is_null($msg))
 		{
-			if ($this->_bLoadCert)
-			{
-				unlink($this->_strCertPath);
-				unlink($this->_strKeyPath);
-			}
 			$this->setError($msg);
 			return false;
 		}
@@ -111,8 +78,8 @@ class Curl extends Common
 	 */
 	public function get($url, &$result = '')
 	{
-		curl_setopt(self::$_oCurl, CURLOPT_URL, $url);
-		curl_setopt(self::$_oCurl, CURLOPT_POST, 0);
+		curl_setopt($this->oCurl, CURLOPT_URL, $url);
+		curl_setopt($this->oCurl, CURLOPT_POST, 0);
 		return $this->_execCurl($result);
 	}
 
@@ -124,24 +91,11 @@ class Curl extends Common
 	 * @param boolean $useCert 是否使用证书
 	 * @return boolean
 	 */
-	public function post($url, $param, &$result = '', $useCert = false)
+	public function post($url, $param, &$result = '')
 	{
-		curl_setopt(self::$_oCurl, CURLOPT_URL, $url);
-		curl_setopt(self::$_oCurl, CURLOPT_POST, 1);
-		curl_setopt(self::$_oCurl, CURLOPT_POSTFIELDS, $param);
-		//证书
-		$this->_bLoadCert = $useCert;
-		if ($useCert)
-		{
-			if (!$this->_getPemByUuid())
-			{
-				return false;
-			}
-			curl_setopt(self::$_oCurl, CURLOPT_SSLCERTTYPE, 'PEM');
-			curl_setopt(self::$_oCurl, CURLOPT_SSLCERT, $this->_strCertPath);
-			curl_setopt(self::$_oCurl, CURLOPT_SSLKEYTYPE, 'PEM');
-			curl_setopt(self::$_oCurl, CURLOPT_SSLKEY, $this->_strKeyPath);
-		}
+		curl_setopt($this->oCurl, CURLOPT_URL, $url);
+		curl_setopt($this->oCurl, CURLOPT_POST, 1);
+		curl_setopt($this->oCurl, CURLOPT_POSTFIELDS, $param);
 		return $this->_execCurl($result);
 	}
 
@@ -154,9 +108,9 @@ class Curl extends Common
 	 */
 	public function file($url, $param, &$result = '')
 	{
-		curl_setopt(self::$_oCurl, CURLOPT_URL, $url);
-		curl_setopt(self::$_oCurl, CURLOPT_SAFE_UPLOAD, true);
-		curl_setopt(self::$_oCurl, CURLOPT_POST, 1);
+		curl_setopt($this->oCurl, CURLOPT_URL, $url);
+		curl_setopt($this->oCurl, CURLOPT_SAFE_UPLOAD, true);
+		curl_setopt($this->oCurl, CURLOPT_POST, 1);
 
 		$bHasBuffer = false;
 		$bHasFile = false;
@@ -212,7 +166,7 @@ class Curl extends Common
 		}
 
 		$param[$strFileKey] = new \CURLFile(realpath($strTempPath), $strFileType);
-		curl_setopt(self::$_oCurl, CURLOPT_POSTFIELDS, $param);
+		curl_setopt($this->oCurl, CURLOPT_POSTFIELDS, $param);
 		return $this->_execCurl($result);
 	}
 
@@ -222,7 +176,7 @@ class Curl extends Common
 	 */
 	public function setTimeout($nTime)
 	{
-		$this->_nTimeout = $nTime;
+		$this->nTimeout = $nTime;
 	}
 
 	/**
@@ -231,7 +185,6 @@ class Curl extends Common
 	 */
 	public function __destruct()
 	{
-		//关闭句柄
-		curl_close(self::$_oCurl);
+		curl_close($this->oCurl);
 	}
 }

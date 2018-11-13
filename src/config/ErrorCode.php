@@ -1,6 +1,6 @@
 <?php
 
-namespace lazymanso\wechat;
+namespace lazymanso\wechat\config;
 
 /**
  * 微信接口错误代码与错误信息配置类

@@ -33,10 +33,10 @@ class MiniProgram extends Common
 	/**
 	 * 代理转发
 	 * @param string $strAction [in]方法名
-	 * @param array $aParam [opt]方法参数列表
+	 * @param array $aArgs [in]方法参数列表
 	 * @throws \Exception
 	 */
-	public function __call($strAction, array $aParam = [])
+	public function __call($strAction, array $aArgs)
 	{
 		$strClass = '\\lazymanso\\wechat\\miniprogram\\' . $this->strModule;
 		if (!class_exists($strClass))
@@ -47,7 +47,7 @@ class MiniProgram extends Common
 		{
 			throw new \Exception($strClass . '::' . $strAction . ' not found');
 		}
-		return call_user_func_array([self::getInstance($strClass), $strAction], $aParam);
+		return call_user_func_array([self::getInstance($strClass), $strAction], $aArgs);
 	}
 
 	/**
