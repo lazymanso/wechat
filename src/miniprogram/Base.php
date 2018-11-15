@@ -23,6 +23,12 @@ class Base extends Common
 	protected $strAppSecret;
 
 	/**
+	 * 小程序请求接口令牌
+	 * @var string
+	 */
+	protected $strToken;
+
+	/**
 	 * 简单的 php curl 工具类
 	 * @var \lazymanso\wechat\util\Curl
 	 */
@@ -37,6 +43,16 @@ class Base extends Common
 	}
 
 	/**
+	 * 设置token
+	 * @param string $strToken [in]access token
+	 * @return boolean
+	 */
+	public function setToken($strToken)
+	{
+		$this->strToken = $strToken;
+	}
+
+	/**
 	 * 向微信发送请求
 	 * @param int $nCommand [in]api接口代码
 	 * @param mixed $param [in]请求参数
@@ -45,12 +61,28 @@ class Base extends Common
 	 */
 	protected function doCommand($nCommand, $param, $strDataType = '')
 	{
-		if (!$aRequest = Command::get($nCommand, $param))
+		if (!$aRequest = Command::get($nCommand))
 		{
-			$this->setError('解析微信小程序命令失败');
+			$this->setError('获取微信接口请求设置信息失败');
 			return false;
 		}
-		//处理参数
+		// 检测$param中是否存在命令所需的get参数
+		$aQuery = [];
+		foreach ($aRequest['query'] as $key)
+		{
+			if (!isset($param[$key]) || empty($param[$key]))
+			{
+				$this->setError('缺少query参数：' . $key);
+				return false;
+			}
+			$aQuery[$key] = $param[$key];
+			unset($param[$key]);
+		}
+		if (!empty($aQuery))
+		{
+			$aRequest['url'] .= '?' . http_build_query($aQuery);
+		}
+		// 处理格式化请求内容
 		switch ($strDataType)
 		{
 			case 'xml':
@@ -62,7 +94,7 @@ class Base extends Common
 			default :
 				$data = $param;
 		}
-		//发送请求
+		// 发送请求
 		$this->oCurlUtil = new Curl;
 		$result = '';
 		switch ($aRequest['method'])
@@ -77,13 +109,20 @@ class Base extends Common
 				$cmdResult = $this->oCurlUtil->file($aRequest['url'], $data, $result);
 				break;
 		}
+		$strTraceParam = is_array($data) ? print_r($data, true) : $data;
 		if (!$cmdResult)
 		{
-			$data = is_array($data) ? print_r($data, true) : $data;
-			$this->setError('请求微信接口失败 ' . $aRequest['method'] . ' ' . $aRequest['url'] . ' ' . $data);
+			$this->setError('请求微信接口失败 ' . $aRequest['method'] . ' ' . $aRequest['url'] . ' ' . $strTraceParam);
 			return false;
 		}
-		return $this->checkResult($result);
+		$response = $this->checkResult($result);
+		if (false === $response)
+		{
+			$data = is_array($data) ? print_r($data, true) : $data;
+			$this->setError($this->getError() . '，接口信息：' . print_r($aRequest, true) . '，接口参数：' . $strTraceParam);
+			return false;
+		}
+		return $response;
 	}
 
 	/**
@@ -120,8 +159,8 @@ class Base extends Common
 			}
 			elseif ('FAIL' === $aResult['result_code'])
 			{
-				//$this->setError($aResult['err_code'] . ',' . $aResult['err_code_des']);
-				$this->setError($aResult['err_code']);
+				$this->setError($aResult['err_code_des']);
+				$this->setErrorCode($aResult['err_code']);
 				return false;
 			}
 			else

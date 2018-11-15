@@ -2,7 +2,7 @@
 
 namespace lazymanso\wechat;
 
-use lazymanso\wechat\config\ErrorCode;
+//use lazymanso\wechat\config\ErrorCode;
 
 class Common
 {
@@ -13,6 +13,22 @@ class Common
 	 * @var string
 	 */
 	private static $_strError = '';
+
+	/**
+	 * 错误号
+	 * @static
+	 * @access private
+	 * @var string
+	 */
+	private static $_strErrorNo = '';
+
+	/**
+	 * 错误码
+	 * @static
+	 * @access private
+	 * @var string
+	 */
+	private static $_strErrorCode = '';
 
 	/**
 	 * 检测要求的字段是否存在
@@ -70,18 +86,7 @@ class Common
 	 */
 	public function getError()
 	{
-		if (!empty(self::$_strError) && is_string(self::$_strError))
-		{
-			return self::$_strError;
-		}
-		elseif (is_numeric(self::$_strError))
-		{
-			return ErrorCode::getError(self::$_strError);
-		}
-		else
-		{
-			return self::$_strError;
-		}
+		return self::$_strError;
 	}
 
 	/**
@@ -91,17 +96,49 @@ class Common
 	 */
 	public function getErrorNo()
 	{
-		return is_numeric(self::$_strError) ? self::$_strError : 0;
+		return is_numeric(self::$_strErrorNo) ? self::$_strErrorNo : 0;
+	}
+
+	/**
+	 * 获取错误信息
+	 * @access public
+	 * @return mixed 错误信息
+	 */
+	public function getErrorCode()
+	{
+		return self::$_strErrorCode;
 	}
 
 	/**
 	 * 设置错误信息
-	 * @access public
-	 * @param mixed $mxError [in]错误信息，或错误号
+	 * @access protected
+	 * @param string $mxError [in]错误信息
 	 * @return void
 	 */
 	protected function setError($mxError)
 	{
 		self::$_strError = $mxError;
+	}
+
+	/**
+	 * 获取错误号
+	 * @access protected
+	 * @param int $nNumber [in]错误号
+	 * @return void
+	 */
+	protected function setErrorNo($nNumber)
+	{
+		self::$_strErrorNo = $nNumber;
+	}
+
+	/**
+	 * 获取错误状态码
+	 * @access protected
+	 * @param string $strCode [in]错误号
+	 * @return void
+	 */
+	protected function setErrorCode($strCode)
+	{
+		self::$_strErrorCode = $strCode;
 	}
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace lazymanso\wechat\miniprogram;
+namespace lazymanso\wechat\config;
 
 /**
  * 微信小程序接口命令到api url配置类
@@ -198,7 +198,7 @@ class Command
 		self::TPL_ADD_PRIVATE => [self::BASEAPIURI . 'cgi-bin/wxopen/template/add', ['access_token']],
 		self::TPL_LIST_PRIVATE => [self::BASEAPIURI . 'cgi-bin/wxopen/template/list', ['access_token']],
 		self::TPL_DEL_PRIVATE => [self::BASEAPIURI . 'cgi-bin/wxopen/template/del', ['access_token']],
-		self::TPL_SEND_MESSAGE => [self::BASEAPIURI . 'cgi-bin/message/wxopen/template/send', ['access_token']],
+		self::TPL_SEND_MESSAGE => ['post', self::BASEAPIURI . 'cgi-bin/message/wxopen/template/send', ['access_token']],
 		/** 卡劵接口 */
 		self::CARD_CREATE => [self::BASEAPIURI . 'card/create', ['access_token']],
 		self::CARD_CREATE_QRCODE => [self::BASEAPIURI . 'card/qrcode/create', ['access_token']],
@@ -263,10 +263,9 @@ class Command
 	 * 获取接口地址
 	 * @access public
 	 * @param int $nCode [in]代码
-	 * @param mixed $param [out]额外参数
 	 * @return mixed
 	 */
-	public static function get($nCode, &$param = '')
+	public static function get($nCode)
 	{
 		if (empty($nCode) || !isset(self::$_aMap[$nCode]))
 		{
@@ -279,19 +278,7 @@ class Command
 		return [
 			'method' => $method,
 			'url' => $url,
+			'query' => $aKey,
 		];
-		//检测$param中是否存在命令所需的get参数
-		$aUrlParam = [];
-		foreach ($aKey as $key)
-		{
-			if (!isset($param[$key]) || empty($param[$key]))
-			{
-				self::setError('获取指令地址失败，缺少参数：' . $key);
-				return false;
-			}
-			$aUrlParam[$key] = $param[$key];
-			unset($param[$key]);
-		}
-		return $url . '?' . http_build_query($aUrlParam);
 	}
 }
