@@ -1,13 +1,14 @@
 <?php
 
-namespace lazymanso\wechat\miniprogram;
+namespace lazymanso\wechat\payment;
 
 use lazymanso\wechat\config\Command;
+use lazymanso\wechat\Common;
 
 /**
  * 微信小程序支付
  */
-class Payment extends Base
+class MiniProgramPayment extends Common
 {
 	/**
 	 * 支付小程序appid
@@ -40,23 +41,60 @@ class Payment extends Base
 	protected $strKey;
 
 	/**
+	 * 默认的小程序支付配置
+	 * @var array
+	 */
+	protected $aConfig = [
+		'appid' => '',
+		'secret' => '',
+		'mchid' => '',
+		'mchname' => '',
+		'apikey' => '',
+	];
+
+	/**
+	 * 构造
+	 * @param array $aConfig [in]商户小程序支付配置，格式如下：
+	 * <pre>
+	 * array(
+	 *  'appid' => '',
+	 *  'secret' => '',
+	 * 	'mchid' => '',
+	 * 	'mchname' => '',
+	 * 	'apikey' => '',
+	 * )
+	 * </pre>
+	 */
+	public function __construct(array $aConfig = [])
+	{
+		if (!empty($aConfig))
+		{
+			$this->aConfig = array_merge($this->aConfig, $aConfig);
+		}
+		$this->strAppId = $this->aConfig['appid'];
+		$this->strAppSecret = $this->aConfig['secret'];
+		$this->strMchId = $this->aConfig['mchid'];
+		$this->strMchName = $this->aConfig['mchname'];
+		$this->strKey = $this->aConfig['apikey'];
+	}
+	/**
 	 * 设置商户支付配置
 	 * @param array $aConfig [in]商户支付配置
 	 * @return boolean
 	 */
-	public function setConfig(array $aConfig)
-	{
-		if (!$this->checkFields($aConfig, ['appid', 'secret', 'mchid', 'mchname', 'apikey'], [], true))
-		{
-			return false;
-		}
-		$this->strAppId = $aConfig['appid'];
-		$this->strAppSecret = $aConfig['secret'];
-		$this->strMchId = $aConfig['mchid'];
-		$this->strMchName = $aConfig['mchname'];
-		$this->strKey = $aConfig['apikey'];
-		return true;
-	}
+//	public function setConfig(array $aConfig)
+//	{
+//		if (!$this->checkFields($aConfig, ['appid', 'secret', 'mchid', 'mchname', 'apikey'], [], true))
+//		{
+//			return false;
+//		}
+//		$this->strAppId = $aConfig['appid'];
+//		$this->strAppSecret = $aConfig['secret'];
+//		$this->strMchId = $aConfig['mchid'];
+//		$this->strMchName = $aConfig['mchname'];
+//		$this->strKey = $aConfig['apikey'];
+//		return true;
+//	}
 
 	/**
 	 * 生成签名
@@ -120,11 +158,7 @@ class Payment extends Base
 			'trade_type' => 'JSAPI',
 		];
 		$aParam['sign'] = $this->sign($aParam);
-		if (false === $aResponse = $this->doCommand(Command::PAY_UNIFIED_ORDER, $aParam, 'xml'))
-		{
-			return false;
-		}
-		return $aResponse;
+		return $this->doCommand(Command::PAY_UNIFIED_ORDER, $aParam, 'xml');
 	}
 
 	/**

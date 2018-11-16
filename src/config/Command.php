@@ -181,7 +181,7 @@ class Command
 	private static $_aMap = [
 		/** 基础类 */
 		self::BASE_JSCODE_TO_SESSION => [self::BASEAPIURI . 'sns/jscode2session', ['appid', 'secret', 'js_code', 'grant_type']],
-		self::BASE_ACCESS_TOKEN => [self::BASEAPIURI . 'cgi-bin/token', ['appid', 'secret', 'grant_type']],
+		self::BASE_ACCESS_TOKEN => ['get', self::BASEAPIURI . 'cgi-bin/token?grant_type=client_credential', ['appid', 'secret']],
 		self::BASE_MEDIA_UPLOADIMG => [self::BASEAPIURI . 'cgi-bin/media/uploadimg', ['access_token']],
 		self::BASE_GET_TICKET => [self::BASEAPIURI . 'cgi-bin/ticket/getticket', ['access_token', 'type']],
 		/** 小程序支付接口 */
@@ -196,7 +196,7 @@ class Command
 		self::TPL_LIB_LIST => [self::BASEAPIURI . 'cgi-bin/wxopen/template/library/list', ['access_token']],
 		self::TPL_LIB_KEYWORD_LIST => [self::BASEAPIURI . 'cgi-bin/wxopen/template/library/get', ['access_token']],
 		self::TPL_ADD_PRIVATE => [self::BASEAPIURI . 'cgi-bin/wxopen/template/add', ['access_token']],
-		self::TPL_LIST_PRIVATE => [self::BASEAPIURI . 'cgi-bin/wxopen/template/list', ['access_token']],
+		self::TPL_LIST_PRIVATE => ['post', self::BASEAPIURI . 'cgi-bin/wxopen/template/list', ['access_token']],
 		self::TPL_DEL_PRIVATE => [self::BASEAPIURI . 'cgi-bin/wxopen/template/del', ['access_token']],
 		self::TPL_SEND_MESSAGE => ['post', self::BASEAPIURI . 'cgi-bin/message/wxopen/template/send', ['access_token']],
 		/** 卡劵接口 */
