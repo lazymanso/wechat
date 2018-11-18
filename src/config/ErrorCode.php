@@ -22,9 +22,9 @@ class ErrorCode
 	/** invalid appsecret */
 	const INVALID_APPSECRET = 40125; //
 	/** form id 不正确，或者过期 */
-	const FORM_ID = 41028; //
+	const FORM_ID_INVALID = 41028; //
 	/** form id 已被使用 */
-	const FORM_ID_INVALID = 41029; //
+	const FORM_ID_USED = 41029; //
 	/** 模板消息设置的page不正确 */
 	const INVALID_TPLMSG_PAGE = 41030; //
 	/** access token 过期 */
@@ -122,8 +122,8 @@ class ErrorCode
 		self::REQUIRE_GET_METHOD => '请使用 GET 方式请求微信接口',
 		self::REQUIRE_POST_METHOD => '请使用 POST 方式请求微信接口',
 		self::REQUEST_DATA_FORMAT => '请求微信接口的数据格式错误',
-		self::FORM_ID => 'form id 错误，或者过期',
-		self::FORM_ID_INVALID => 'form id 已被使用',
+		self::FORM_ID_INVALID => 'form id 错误，或者过期',
+		self::FORM_ID_USED => 'form id 已被使用',
 		self::TEMPLATE_MESSAGE_ID => 'template id 错误或已删除',
 		self::INVALID_TPLMSG_PAGE => 'page 路径错误或小程序未发布',
 		self::UNAUTHORIZED => '功能未授权，请确认小程序已获取该接口',

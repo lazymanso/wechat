@@ -77,7 +77,7 @@ class Payment extends Common
 			default :
 				throw new \Exception('payment product not found');
 		}
-		$strClass = '\\lazymanso\\wechat\\payment\\' . $strClassName . '\\Payment';
+		$strClass = '\\lazymanso\\wechat\\payment\\' . $strClassName . 'Payment';
 		if (!class_exists($strClass))
 		{
 			throw new \Exception($strClass . ' not found');

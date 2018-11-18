@@ -3,6 +3,7 @@
 namespace lazymanso\wechat;
 
 use lazymanso\wechat\util\Curl;
+use lazymanso\wechat\config\Command;
 
 class Common
 {
@@ -178,12 +179,19 @@ class Common
 		$aQuery = [];
 		foreach ($aRequest['query'] as $key)
 		{
-			if (!isset($param[$key]) || empty($param[$key]))
+			if (in_array($key, ['access_token', 'component_access_token']))
+			{
+				$aQuery[$key] = $this->strToken;
+			}
+			elseif (!isset($param[$key]) || empty($param[$key]))
 			{
 				$this->setError('缺少query参数：' . $key);
 				return false;
 			}
-			$aQuery[$key] = $param[$key];
+			else
+			{
+				$aQuery[$key] = $param[$key];
+			}
 			unset($param[$key]);
 		}
 		if (!empty($aQuery))
@@ -253,7 +261,7 @@ class Common
 	/**
 	 * 检查并处理curl返回结果
 	 * @param mixed $result [in]curl返回数据
-	 * @return boolean|array|string
+	 * @return mixed 返回 false ,表示有错误
 	 */
 	protected function checkResult($result = '')
 	{
@@ -281,7 +289,8 @@ class Common
 		{
 			if (isset($aResult['errcode']) && !empty($aResult['errcode']))
 			{
-				$this->setError($aResult['errcode']);
+				$this->setErrorNo($aResult['errcode']);
+				$this->setError($aResult['errmsg']);
 				return false;
 			}
 			return $aResult;

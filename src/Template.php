@@ -46,7 +46,6 @@ class Template extends Common
 		{
 			return false;
 		}
-		$aInput['access_token'] = $this->strToken;
 		return $this->doCommand(Command::TPL_SEND_MESSAGE, $aInput, 'json');
 	}
 
@@ -62,11 +61,10 @@ class Template extends Common
 	 */
 	public function getTemplateList(array $aInput)
 	{
-		if (!$this->checkFields($aInput, ['offset', 'count'], [], true))
+		if (!$this->checkFields($aInput, ['offset', 'count']))
 		{
 			return false;
 		}
-		$aInput['access_token'] = $this->strToken;
 		return $this->doCommand(Command::TPL_LIST_PRIVATE, $aInput, 'json');
 	}
 }
