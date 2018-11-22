@@ -233,25 +233,25 @@ class MiniProgramPayment extends Common
 
 	/**
 	 * 处理微信支付结果通知数据
-	 * @param array $aInput [in]'xml', 'order_sn', 'total_fee'
+	 * @param array $aInput [in]'xml', 'total_fee'
 	 * @return boolean|array 处理成功会返回通知信息（数组）
 	 */
 	public function paymentNotify(array $aInput)
 	{
-		if (!$this->checkFields($aInput, ['xml', 'order_sn', 'total_fee'], [], true))
+		if (!$this->checkFields($aInput, ['xml', 'total_fee'], [], true))
 		{
 			return false;
 		}
 		$aParam = $this->xml2array($aInput['xml']);
-		$outradeNo = $aParam['out_trade_no'];
+		//$outradeNo = $aParam['out_trade_no'];
 		$sign = $aParam['sign'];
 		$totalfee = $aParam['total_fee'];
 		//
-		if ($outradeNo != $aInput['order_sn'])
-		{
-			$this->setError('订单号不一致');
-			return false;
-		}
+//		if ($outradeNo != $aInput['order_sn'])
+//		{
+//			$this->setError('订单号不一致');
+//			return false;
+//		}
 		// 对比微信推送的消息内容中支付金额和商户侧的订单金额是否相等
 		if ($totalfee != $aInput['total_fee'])
 		{

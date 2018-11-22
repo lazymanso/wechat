@@ -308,6 +308,10 @@ class Common
 	 */
 	protected function xml2array($xml)
 	{
+		if (empty($xml))
+		{
+			return [];
+		}
 		libxml_disable_entity_loader(true);
 		$xmlstring = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA);
 		$val = json_decode(json_encode($xmlstring), true);
