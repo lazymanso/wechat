@@ -135,7 +135,7 @@ class MiniProgramPayment extends Common
 	 */
 	public function unifiedOrder(array $aInput)
 	{
-		if (!$this->checkFields($aInput, ['out_trade_no', 'total_fee', 'openid', 'notify_url']))
+		if (!$this->checkFields($aInput, ['out_trade_no', 'total_fee', 'openid', 'notify_url', 'attach']))
 		{
 			return false;
 		}
@@ -150,6 +150,7 @@ class MiniProgramPayment extends Common
 			'mch_id' => $this->strMchId,
 			'nonce_str' => $this->createNoncestr(),
 			'body' => $strBody,
+			'attach' => $aInput['attach'],
 			'out_trade_no' => $aInput['out_trade_no'],
 			'total_fee' => $aInput['total_fee'],
 			'spbill_create_ip' => $_SERVER['REMOTE_ADDR'],
@@ -265,5 +266,43 @@ class MiniProgramPayment extends Common
 			return false;
 		}
 		return $aParam;
+	}
+
+	/**
+	 * 退款查询
+	 * 提交退款申请后，通过调用该接口查询退款状态。
+	 * 退款有一定延时，用零钱支付的退款20分钟内到账，银行卡支付的退款3个工作日后重新查询退款状态。
+	 * @param array $aInput [in]参数列表
+	 * <pre>
+	 * out_trade_no - string,必填,商户的订单编号
+	 * </pre>
+	 * @param array $aOutput [out]响应内容
+	 * @link https://pay.weixin.qq.com/wiki/doc/api/wxa/wxa_api.php?chapter=9_5
+	 * @return boolean|array 返回 false 时表示出错,返回空数组时表示订单不存在
+	 */
+	public function queryRefund(array $aInput)
+	{
+		if (!$this->checkFields($aInput, ['out_trade_no'], [], true))
+		{
+			return false;
+		}
+		// 请求参数
+		$aParam = [
+			'appid' => $this->strAppId,
+			'mch_id' => $this->strMchId,
+			'nonce_str' => $this->createNoncestr(),
+			'out_trade_no' => $aInput['out_trade_no'],
+		];
+		// 签名
+		$aParam['sign'] = $this->sign($aParam);
+		if (false === $aResponse = $this->doCommand(Command::PAY_QUERY_REFUND_ORDER, $aParam, 'xml'))
+		{
+			if ('REFUNDNOTEXIST' === $this->getErrorCode())
+			{
+				return [];
+			}
+			return false;
+		}
+		return $aResponse;
 	}
 }
