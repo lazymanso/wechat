@@ -173,7 +173,7 @@ class Command
 	const SETTING_UNBIND_TESTER = 803; //
 
 	/**
-	 * 数据对象字段的类型显示映射
+	 * 命令配置映射
 	 * @static
 	 * @access private
 	 * @var array
